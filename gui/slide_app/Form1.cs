@@ -13,6 +13,7 @@ using System.IO;
 using System.Diagnostics;
 using Microsoft.Office.Core;
 using ppt = Microsoft.Office.Interop.PowerPoint;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
 namespace slide_app
 {
@@ -26,7 +27,7 @@ namespace slide_app
         public static DataTable table;
         public static bool is_bracket, is_square;
         public static float Speed, Intonation, prePhonemeLength, postPhonemeLength;
-        private bool is_DeleteFile, new_file;
+        private bool is_DeleteFile, new_file, not_FileSelect;
         private static readonly string passwordChars = "0123456789abcdefghijklmnopqrstuvwxyz";
 
 
@@ -159,6 +160,7 @@ namespace slide_app
             FileLabel.Text = "";
             is_bracket = false;
             is_square = false;
+            not_FileSelect = false;
             CancelButton.Enabled = false;
             SaveButton.Enabled = false;
             BackVOICEVOX.DoWork += new DoWorkEventHandler(BackVOICEVOX_DoWork);
@@ -216,7 +218,46 @@ namespace slide_app
             ofDialog.InitialDirectory = @"C:";
             ofDialog.Title = "スライドを開く";
             ofDialog.Filter = "プレゼンテーションとスライドショー(*.pptx; *.pptm; *.ppt)| *.pptx; *.pptm; *.ppt | すべてのファイル(*.*) | *.* ";
-            if (ofDialog.ShowDialog() == DialogResult.OK) { OpenFileBox.Text = ofDialog.FileName; }
+            if (ofDialog.ShowDialog() == DialogResult.OK) 
+            {
+                foreach (SaveFiles files in SaveFile_list)
+                {
+                    if (files.ppt_filename == ofDialog.FileName)
+                    {
+                        DialogResult result = MessageBox.Show("そのスライドは既にスライド画像・音声・表ができています\n削除して新しく作成しますか？", "", MessageBoxButtons.YesNo);
+                        if (result == DialogResult.Yes)
+                        {
+                            not_FileSelect = true;
+                            File.Delete(Directory.GetCurrentDirectory() + "\\csv\\" + file_name + ".tsv");
+                            Directory.Delete(Directory.GetCurrentDirectory() + "\\slide_image\\" + file_name, true);
+                            Directory.Delete(Directory.GetCurrentDirectory() + "\\voice\\" + file_name, true);
+                            List<string> lines = new List<string>();
+                            foreach (SaveFiles j in SaveFile_list)
+                            {
+                                if (ofDialog.FileName != j.ppt_filename) lines.Add(j.random_str + "\t" + j.ppt_filename);
+                            }
+                            File.WriteAllLines(".\\savefiles.tsv", lines, Encoding.UTF8);
+                            using (StreamReader sr = new StreamReader(".\\savefiles.tsv"))
+                            {
+                                while (0 <= sr.Peek())
+                                {
+                                    //カンマ区切りで分割して配列で格納する
+                                    var line = sr.ReadLine().Split('\t');
+                                    if (line is null) continue;
+                                    else if (line.Count() < 2) break;
+                                    //リストにデータを追加する
+                                    SaveFiles s_d = new SaveFiles { random_str = line[0], ppt_filename = line[1] };
+                                    SaveFile_list.Add(s_d);
+                                }
+                                OpenFileBox.Items.Remove(ofDialog.FileName);
+                            }
+                            break;
+                        }
+                        else if (result == DialogResult.No) return;
+                    }
+                }
+                OpenFileBox.Text = ofDialog.FileName;
+            }
             else { return; }
             ofDialog.Dispose();
             if (!File.Exists(OpenFileBox.Text))
@@ -225,12 +266,12 @@ namespace slide_app
                                     MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
+
+            // スライド画像・ノートの読み込み
             var ppt_file = new ppt.Application().Presentations.Open(OpenFileBox.Text,
                     MsoTriState.msoTrue,
                     MsoTriState.msoTrue,
                     MsoTriState.msoFalse);
-
-            // スライド画像・ノートの読み込み
             string txt;
             int num = 0;
             notes = new List<Cue_card>();
@@ -325,11 +366,12 @@ namespace slide_app
             }
             Generate_Grid();
             new_file = true;
-            
+            not_FileSelect = false;
         }
 
         private void OpenFileBox_SelectedIndexChanged(object sender, EventArgs e)
         {
+            if (not_FileSelect) return;
             if (!File.Exists(OpenFileBox.Text))
             {
                 MessageBox.Show("既に存在しないファイルです\n移動した場合は新たにファイル場所を設定しなおす必要があります", "エラー",
@@ -347,6 +389,29 @@ namespace slide_app
                     MessageBox.Show("ファイルを指定していないか存在しないファイルです", "エラー",
                                         MessageBoxButtons.OK, MessageBoxIcon.Error);
                     return;
+                }
+                List<string> lines = new List<string>();
+                foreach (SaveFiles j in SaveFile_list)
+                {
+                    if (ofDialog.FileName != j.ppt_filename) lines.Add(j.random_str + "\t" + j.ppt_filename);
+                    else lines.Add(j.random_str + "\t" + ofDialog.FileName);
+                }
+                File.WriteAllLines(".\\savefiles.tsv", lines, Encoding.UTF8);
+                using (StreamReader sr = new StreamReader(".\\savefiles.tsv"))
+                {
+                    while (0 <= sr.Peek())
+                    {
+                        //カンマ区切りで分割して配列で格納する
+                        var line = sr.ReadLine().Split('\t');
+                        if (line is null) continue;
+                        else if (line.Count() < 2) break;
+                        //リストにデータを追加する
+                        SaveFiles s_d = new SaveFiles { random_str = line[0], ppt_filename = line[1] };
+                        SaveFile_list.Add(s_d);
+                    }
+                    OpenFileBox.Items.Remove(ofDialog.FileName);
+                    //OpenFileBox.Items.Clear();
+                    //foreach (SaveFiles j in SaveFile_list) OpenFileBox.Items.Add(j.ppt_filename);
                 }
             }
             notes = new List<Cue_card>();
@@ -369,7 +434,7 @@ namespace slide_app
                                 continue;
                             }
                             //リストにデータを追加する
-                            Cue_card m = new Cue_card { No = int.Parse(line[0]), Num = int.Parse(line[1]), Id = int.Parse(line[2]), Pnt = line[3], Sentence = line[4], Voice = line[4], Bracket = line[5] };
+                            Cue_card m = new Cue_card { No = int.Parse(line[0]), Num = int.Parse(line[1]), Id = int.Parse(line[2]), Pnt = line[3], Sentence = line[4], Voice = line[5], Bracket = line[6] };
                             notes.Add(m);
                         }
                     }
@@ -394,15 +459,17 @@ namespace slide_app
             progressBar1.Value = 0;
 
             // リスト末尾にVOICEVOXの音源名と締めのあいさつを入れる。音源名の発声はライセンス対策 //
-            List<Cue_card> last_list = new List<Cue_card>();
-            Cue_card m_last_1 = new Cue_card { No = notes[notes.Count - 1].No + 1, Num = notes[notes.Count - 1].Num, Id = 21, Pnt = "。", Sentence = String.Format("この動画は、voicevox、{0}の音声でお送り致しました。", VoiceNameCombo.Text), Bracket = String.Format("VOICEVOX: {0}", VoiceNameCombo.Text), Voice = String.Format("この動画は、voicevox、{0}の音声でお送り致しました。", VoiceNameCombo.Text), Size = 10 };
-            last_list.Add(m_last_1);
-            notes.Add(m_last_1);
-            Cue_card m_last_2 = new Cue_card { No = m_last_1.No + 1, Num = m_last_1.Num, Id = 0, Pnt = "。", Sentence = String.Format("ここまでのご視聴、ありがとうございました。", VoiceNameCombo.Text), Bracket = "", Voice = "ここまでのご視聴、ありがとうございました。", Size = 10 };
-            last_list.Add(m_last_2);
-            notes.Add(m_last_2);
-            foreach (var note in last_list) table.Rows.Add(note.No, note.Num, note.Id, note.Pnt, note.Sentence, note.Voice, note.Bracket);
-
+            if (notes[notes.Count - 1].Sentence != "ここまでのご視聴、ありがとうございました。")
+            {
+                List<Cue_card> last_list = new List<Cue_card>();
+                Cue_card m_last_1 = new Cue_card { No = notes[notes.Count - 1].No + 1, Num = notes[notes.Count - 1].Num, Id = 21, Pnt = "。", Sentence = String.Format("この動画は、voicevox、{0}の音声でお送り致しました。", VoiceNameCombo.Text), Bracket = String.Format("VOICEVOX: {0}", VoiceNameCombo.Text), Voice = String.Format("この動画は、voicevox、{0}の音声でお送り致しました。", VoiceNameCombo.Text), Size = 10 };
+                last_list.Add(m_last_1);
+                notes.Add(m_last_1);
+                Cue_card m_last_2 = new Cue_card { No = m_last_1.No + 1, Num = m_last_1.Num, Id = 0, Pnt = "。", Sentence = String.Format("ここまでのご視聴、ありがとうございました。", VoiceNameCombo.Text), Bracket = "", Voice = "ここまでのご視聴、ありがとうございました。", Size = 10 };
+                last_list.Add(m_last_2);
+                notes.Add(m_last_2);
+                foreach (var note in last_list) table.Rows.Add(note.No, note.Num, note.Id, note.Pnt, note.Sentence, note.Voice, note.Bracket);
+            }
             // スライド画像を生成する //
             if (new_file) file_name = GeneratePassword(10); //ファイルは適当な文字列。unityで音声や画像を読み込む際、日本語を含んだ文字列は認識できないため
             var ppt_file = new ppt.Application().Presentations.Open(OpenFileBox.Text,

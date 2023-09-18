@@ -61,6 +61,7 @@ namespace slide_app
             RecordButton = new System.Windows.Forms.Button();
             AvatorButton = new System.Windows.Forms.Button();
             SaveButton = new System.Windows.Forms.Button();
+            folderBrowserDialog1 = new System.Windows.Forms.FolderBrowserDialog();
             tabPage1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)ResultGrid).BeginInit();
             tabControl1.SuspendLayout();
@@ -456,6 +457,7 @@ namespace slide_app
         private System.Windows.Forms.Button RecordButton;
         private System.Windows.Forms.Button AvatorButton;
         private System.Windows.Forms.Button SaveButton;
+        private System.Windows.Forms.FolderBrowserDialog folderBrowserDialog1;
     }
 }
 
