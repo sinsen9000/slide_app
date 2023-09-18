@@ -410,8 +410,6 @@ namespace slide_app
                         SaveFile_list.Add(s_d);
                     }
                     OpenFileBox.Items.Remove(ofDialog.FileName);
-                    //OpenFileBox.Items.Clear();
-                    //foreach (SaveFiles j in SaveFile_list) OpenFileBox.Items.Add(j.ppt_filename);
                 }
             }
             notes = new List<Cue_card>();
