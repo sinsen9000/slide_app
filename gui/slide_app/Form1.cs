@@ -14,6 +14,7 @@ using System.Diagnostics;
 using Microsoft.Office.Core;
 using ppt = Microsoft.Office.Interop.PowerPoint;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement.Window;
 
 namespace slide_app
 {
@@ -27,7 +28,8 @@ namespace slide_app
         public static DataTable table;
         public static bool is_bracket, is_square;
         public static float Speed, Intonation, prePhonemeLength, postPhonemeLength;
-        private bool is_DeleteFile, new_file, not_FileSelect;
+        private bool new_file, not_FileSelect;
+        private bool is_cancel = false;
         private static readonly string passwordChars = "0123456789abcdefghijklmnopqrstuvwxyz";
 
 
@@ -151,6 +153,7 @@ namespace slide_app
             postPhonemeLength = 0.25f;
 
             ModeCombo.Text = "normal";
+            file_name = "";
 
             Directory_make(".\\slide_image");
             Directory_make(".\\voice");
@@ -410,6 +413,8 @@ namespace slide_app
                         SaveFile_list.Add(s_d);
                     }
                     OpenFileBox.Items.Remove(ofDialog.FileName);
+                    //OpenFileBox.Items.Clear();
+                    //foreach (SaveFiles j in SaveFile_list) OpenFileBox.Items.Add(j.ppt_filename);
                 }
             }
             notes = new List<Cue_card>();
@@ -432,7 +437,7 @@ namespace slide_app
                                 continue;
                             }
                             //リストにデータを追加する
-                            Cue_card m = new Cue_card { No = int.Parse(line[0]), Num = int.Parse(line[1]), Id = int.Parse(line[2]), Pnt = line[3], Sentence = line[4], Voice = line[5], Bracket = line[6] };
+                            Cue_card m = new Cue_card { No = int.Parse(line[0]), Num = int.Parse(line[1]), Id = int.Parse(line[2]), Pnt = line[3], Sentence = line[4], Voice = line[5], Bracket = line[6], Size = line[4].Length };
                             notes.Add(m);
                         }
                     }
@@ -498,7 +503,7 @@ namespace slide_app
             if (!Directory.Exists(dic_voice))
             {
                 DirectoryInfo di = new DirectoryInfo(dic_voice); //音声保存フォルダを生成
-                di.Create();
+                di.Create(); 
             }
             OpenFileButton.Enabled = false;
             GenerateButton.Enabled = false;
@@ -510,6 +515,25 @@ namespace slide_app
 
         private void BackVOICEVOX_DoWork(object sender, DoWorkEventArgs e)
         {
+            List<Cue_card> notes = new List<Cue_card>();
+            foreach (DataGridViewRow row in ResultGrid.Rows)
+            {
+                if (!row.IsNewRow)
+                {
+                    Cue_card m = new Cue_card {
+                        No = Convert.ToInt32(row.Cells["番号"].Value), // "No"列のデータを整数型に変換
+                        Num = Convert.ToInt32(row.Cells["ページ"].Value), // "Num"列のデータを整数型に変換
+                        Id = Convert.ToInt32(row.Cells["動作ID"].Value), // "Id"列のデータを整数型に変換
+                        Pnt = row.Cells["記号"].Value.ToString(), // "Pnt"列のデータを文字列に変換
+                        Sentence = row.Cells["音声の文章"].Value.ToString(), // "Sentence"列のデータを文字列に変換
+                        Bracket = row.Cells["補足説明"].Value.ToString(), // "Bracket"列のデータを文字列に変換
+                        Voice = row.Cells["字幕用の文章"].Value.ToString(), // "Voice"列のデータを文字列に変換
+                        Size = row.Cells["音声の文章"].Value.ToString().Length
+                    };
+                    notes.Add(m);
+                }
+            }
+
             int before_num = 1;
             foreach (var note in notes)
             {
@@ -569,9 +593,12 @@ namespace slide_app
 
         private void CancelButton_Click(object sender, EventArgs e)
         {
+            File.Delete(Directory.GetCurrentDirectory() + "\\csv\\" + file_name + ".tsv");
             Directory.Delete(Directory.GetCurrentDirectory() + "\\slide_image\\" + file_name, true);
             Directory.Delete(Directory.GetCurrentDirectory() + "\\voice\\" + file_name, true);
+            
             CancelButton.Enabled = false;
+            is_cancel = true;
             BackVOICEVOX.CancelAsync();
 
             progressBar1.Value = 0;
@@ -602,8 +629,7 @@ namespace slide_app
             OpenFileButton.Enabled = true;
             GenerateButton.Enabled = true;
             CancelButton.Enabled = false;
-
-            if (!is_DeleteFile)
+            if (!is_cancel) //最後まで遂行した場合
             {
                 //CSV出力用変数の作成
                 List<string> lines = new List<string>();
@@ -655,7 +681,10 @@ namespace slide_app
                     OpenFileBox.Items.Add(add_file.ppt_filename);
                 }
                 SaveButton.Enabled = true;
+                new_file = false;
             }
+            else is_cancel = false;
+                
         }
 
         private void RecordButton_Click_1(object sender, EventArgs e)
@@ -673,57 +702,73 @@ namespace slide_app
 
         private void SaveButton_Click(object sender, EventArgs e)
         {
-            if (!is_DeleteFile)
+            var ppt_file = new ppt.Application().Presentations.Open(OpenFileBox.Text,
+                MsoTriState.msoTrue,
+                MsoTriState.msoTrue,
+                MsoTriState.msoFalse);
+            int width = (int)ppt_file.PageSetup.SlideWidth;
+            int height = (int)ppt_file.PageSetup.SlideHeight;
+            string file2;
+            string dic_image = Directory.GetCurrentDirectory() + "\\slide_image\\" + file_name;
+            for (int i = 1; i <= ppt_file.Slides.Count; i++)
             {
-                //CSV出力用変数の作成
-                List<string> lines = new List<string>();
+                file2 = dic_image + String.Format("\\slide{0:0}.jpg", i); //JPEGとして保存
+                ppt_file.Slides[i].Export(file2, "jpg", width, height);
+            }
+            if (ppt_file != null)
+            {
+                ppt_file.Close(); //ファイルを閉じる
+                ppt_file = null;
+            }
 
-                //列名をカンマ区切りで1行に連結
-                List<string> header = new List<string>();
-                foreach (DataColumn dr in table.Columns) header.Add(dr.ColumnName);
-                lines.Add(string.Join("\t", header));
+            //CSV出力用変数の作成
+            List<string> lines = new List<string>();
 
-                //列の値をカンマ区切りで1行に連結
-                foreach (DataRow dr in table.Rows) lines.Add(string.Join("\t", dr.ItemArray));
-                string dic_csv = Directory.GetCurrentDirectory() + "\\csv";
-                if (!Directory.Exists(dic_csv))
-                {
-                    DirectoryInfo di = new DirectoryInfo(dic_csv);
-                    di.Create();
-                }
-                File.WriteAllLines(dic_csv + "\\" + file_name + @".tsv", lines, Encoding.UTF8);
+            //列名をカンマ区切りで1行に連結
+            List<string> header = new List<string>();
+            foreach (DataColumn dr in table.Columns) header.Add(dr.ColumnName);
+            lines.Add(string.Join("\t", header));
 
-                var options = new JsonSerializerOptions
-                {
-                    // 日本語を変換するためのエンコード設定
-                    Encoder = JavaScriptEncoder.Create(UnicodeRanges.All),
+            //列の値をカンマ区切りで1行に連結
+            foreach (DataRow dr in table.Rows) lines.Add(string.Join("\t", dr.ItemArray));
+            string dic_csv = Directory.GetCurrentDirectory() + "\\csv";
+            if (!Directory.Exists(dic_csv))
+            {
+                DirectoryInfo di = new DirectoryInfo(dic_csv);
+                di.Create();
+            }
+            File.WriteAllLines(dic_csv + "\\" + file_name + @".tsv", lines, Encoding.UTF8);
 
-                    // プロパティ名をキャメルケースに変換
-                    PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+            var options = new JsonSerializerOptions
+            {
+                // 日本語を変換するためのエンコード設定
+                Encoder = JavaScriptEncoder.Create(UnicodeRanges.All),
 
-                    // インデントを付ける
-                    WriteIndented = true
-                };
-                var jsondata = new JsonData
-                {
-                    VisualMode = ModeCombo.Text,
-                    FileName = file_name,
-                    VoiceName = VoiceNameCombo.Text,
-                    VoiceSpeed = Speed,
-                    VoiceInterval = 0f,
-                    VoiceIntonation = Intonation
-                };
-                var jsonString = JsonSerializer.Serialize(jsondata, options);
-                File.WriteAllText(@"Setting.json", jsonString);
-                if (new_file)
-                {
-                    SaveFiles add_file = new SaveFiles { random_str = file_name, ppt_filename = OpenFileBox.Text };
-                    SaveFile_list.Add(add_file);
-                    lines = new List<string>();
-                    foreach (SaveFiles files in SaveFile_list) lines.Add(files.random_str + "\t" + files.ppt_filename);
-                    File.WriteAllLines(".\\savefiles.tsv", lines, Encoding.UTF8);
-                    OpenFileBox.Items.Add(add_file.ppt_filename);
-                }
+                // プロパティ名をキャメルケースに変換
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+
+                // インデントを付ける
+                WriteIndented = true
+            };
+            var jsondata = new JsonData
+            {
+                VisualMode = ModeCombo.Text,
+                FileName = file_name,
+                VoiceName = VoiceNameCombo.Text,
+                VoiceSpeed = Speed,
+                VoiceInterval = 0f,
+                VoiceIntonation = Intonation
+            };
+            var jsonString = JsonSerializer.Serialize(jsondata, options);
+            File.WriteAllText(@"Setting.json", jsonString);
+            if (new_file)
+            {
+                SaveFiles add_file = new SaveFiles { random_str = file_name, ppt_filename = OpenFileBox.Text };
+                SaveFile_list.Add(add_file);
+                lines = new List<string>();
+                foreach (SaveFiles files in SaveFile_list) lines.Add(files.random_str + "\t" + files.ppt_filename);
+                File.WriteAllLines(".\\savefiles.tsv", lines, Encoding.UTF8);
+                OpenFileBox.Items.Add(add_file.ppt_filename);
             }
         }
     }
