@@ -164,6 +164,9 @@ namespace slide_app
             ResultGrid.RowTemplate.Height = 29;
             ResultGrid.Size = new System.Drawing.Size(940, 370);
             ResultGrid.TabIndex = 5;
+            ResultGrid.CurrentCellChanged += ResultGrid_CurrentCellChanged;
+            ResultGrid.CellBeginEdit += ResultGrid_CellBeginEdit;
+            ResultGrid.CellEndEdit += ResultGrid_CellEndEdit2;
             // 
             // tabControl1
             // 
@@ -421,6 +424,11 @@ namespace slide_app
             panel2.PerformLayout();
             ResumeLayout(false);
             PerformLayout();
+        }
+
+        private void ResultGrid_CellEndEdit(object sender, System.Windows.Forms.DataGridViewCellEventArgs e)
+        {
+            throw new System.NotImplementedException();
         }
 
         #endregion

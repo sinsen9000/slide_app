@@ -700,10 +700,29 @@ namespace slide_app
             VoicevoxProcess = Process.Start(@"C:\Program Files\VOICEVOX\run.exe");
         }
 
+        private void ResultGrid_CurrentCellChanged(object sender, EventArgs e)
+        {
+            var dgv = (DataGridView)sender;
+            if (dgv.IsCurrentCellDirty)
+            {
+                dgv.CommitEdit(DataGridViewDataErrorContexts.Commit);
+            }
+        }
+        private void ResultGrid_CellBeginEdit(object sender, DataGridViewCellCancelEventArgs e)
+        {
+            SaveButton.Enabled = false;
+            GenerateButton.Enabled = false;
+
+        }
+        private void ResultGrid_CellEndEdit2(object sender, DataGridViewCellEventArgs e)
+        {
+            SaveButton.Enabled = true;
+            GenerateButton.Enabled = true;
+        }
+
         private void SaveButton_Click(object sender, EventArgs e)
         {
-            AvatorButton.Enabled = false;
-            GenerateButton.Enabled = false;
+            
             var ppt_file = new ppt.Application().Presentations.Open(OpenFileBox.Text,
                 MsoTriState.msoTrue,
                 MsoTriState.msoTrue,
@@ -733,7 +752,9 @@ namespace slide_app
             lines.Add(string.Join("\t", header));
 
             //列の値をカンマ区切りで1行に連結
-            foreach (DataRow dr in table.Rows) lines.Add(string.Join("\t", dr.ItemArray));
+            foreach (DataRow dr in table.Rows) { 
+                lines.Add(string.Join("\t", dr.ItemArray)); 
+            }
             string dic_csv = Directory.GetCurrentDirectory() + "\\csv";
             if (!Directory.Exists(dic_csv))
             {
