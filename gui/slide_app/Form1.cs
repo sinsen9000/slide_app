@@ -515,7 +515,7 @@ namespace slide_app
 
         private void BackVOICEVOX_DoWork(object sender, DoWorkEventArgs e)
         {
-            List<Cue_card> notes = new List<Cue_card>();
+            List<Cue_card> notes = new List<Cue_card>(); //ResultGridからデータを取得
             foreach (DataGridViewRow row in ResultGrid.Rows)
             {
                 if (!row.IsNewRow)
@@ -702,6 +702,8 @@ namespace slide_app
 
         private void SaveButton_Click(object sender, EventArgs e)
         {
+            AvatorButton.Enabled = false;
+            GenerateButton.Enabled = false;
             var ppt_file = new ppt.Application().Presentations.Open(OpenFileBox.Text,
                 MsoTriState.msoTrue,
                 MsoTriState.msoTrue,
@@ -723,6 +725,7 @@ namespace slide_app
 
             //CSV出力用変数の作成
             List<string> lines = new List<string>();
+            table = (DataTable)ResultGrid.DataSource; //ResultGridからデータを取得
 
             //列名をカンマ区切りで1行に連結
             List<string> header = new List<string>();
@@ -770,6 +773,8 @@ namespace slide_app
                 File.WriteAllLines(".\\savefiles.tsv", lines, Encoding.UTF8);
                 OpenFileBox.Items.Add(add_file.ppt_filename);
             }
+            AvatorButton.Enabled = true;
+            GenerateButton.Enabled = true;
         }
     }
 }
