@@ -570,7 +570,8 @@ namespace slide_app
             else if (ModeCombo.Text == "visual+")
             {
                 ModeText.Text = "出力された表通りに音声を作成します。\n" +
-                                 "字幕はノート内の全ての文章をスライド下に表示します。";
+                                 "新しく文章を読み込む前にこの設定を行うと、字幕はノート内の全ての文章をスライド下に表示します。\n" +
+                                 "（文章読み込み後に設定した場合は「visual」と同じです。）";
             }
             else if (ModeCombo.Text == "none")
             {
