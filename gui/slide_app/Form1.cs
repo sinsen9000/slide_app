@@ -152,7 +152,7 @@ namespace slide_app
             prePhonemeLength = 0.25f;
             postPhonemeLength = 0.25f;
 
-            ModeCombo.Text = "normal";
+            ModeCombo.Text = "visual";
             file_name = "";
 
             Directory_make(".\\slide_image");
@@ -221,7 +221,7 @@ namespace slide_app
             ofDialog.InitialDirectory = @"C:";
             ofDialog.Title = "スライドを開く";
             ofDialog.Filter = "プレゼンテーションとスライドショー(*.pptx; *.pptm; *.ppt)| *.pptx; *.pptm; *.ppt | すべてのファイル(*.*) | *.* ";
-            if (ofDialog.ShowDialog() == DialogResult.OK) 
+            if (ofDialog.ShowDialog() == DialogResult.OK)
             {
                 foreach (SaveFiles files in SaveFile_list)
                 {
@@ -302,7 +302,7 @@ namespace slide_app
                                 if (new Regex(@"(）|\))").IsMatch(word.ToString()) && note_count > 0)
                                 {
                                     // 字幕文の生成
-                                    if (mode == "normal") notes[note_count - 1].Bracket = bracket_sentence[..^1];
+                                    if (mode != "visual+") notes[note_count - 1].Bracket = bracket_sentence[..^1];
                                     else
                                     {
                                         // アクセシビリティ優先の場合は（）内文章は音声文・音声字幕文に含める
@@ -323,7 +323,7 @@ namespace slide_app
                                     notes[note_count - 1].Sentence += t;
                                     notes[note_count - 1].Voice = notes[note_count - 1].Sentence;
                                 }
-                                else if (note_count > 0 && ModeCombo.Text == "visual" && new Regex(@"(）|\))").IsMatch(notes[note_count - 1].Pnt))
+                                else if (note_count > 0 && ModeCombo.Text == "visual+" && new Regex(@"(）|\))").IsMatch(notes[note_count - 1].Pnt))
                                 {
                                     // アクセシビリティ優先の場合、()内文字は前の文章に付随する
                                     notes[note_count - 1].Sentence += t;
@@ -342,7 +342,7 @@ namespace slide_app
                                 }
 
                             }
-                            else if (ModeCombo.Text == "visual" && new Regex(@"(。|？|\?|！|\!)").IsMatch(t) && note_count > 0)
+                            else if (ModeCombo.Text == "visual+" && new Regex(@"(。|？|\?|！|\!)").IsMatch(t) && note_count > 0)
                             {
                                 notes[note_count - 1].Sentence += t;
                                 notes[note_count - 1].Voice = notes[note_count - 1].Sentence;
@@ -503,7 +503,7 @@ namespace slide_app
             if (!Directory.Exists(dic_voice))
             {
                 DirectoryInfo di = new DirectoryInfo(dic_voice); //音声保存フォルダを生成
-                di.Create(); 
+                di.Create();
             }
             OpenFileButton.Enabled = false;
             GenerateButton.Enabled = false;
@@ -520,7 +520,8 @@ namespace slide_app
             {
                 if (!row.IsNewRow)
                 {
-                    Cue_card m = new Cue_card {
+                    Cue_card m = new Cue_card
+                    {
                         No = Convert.ToInt32(row.Cells["番号"].Value), // "No"列のデータを整数型に変換
                         Num = Convert.ToInt32(row.Cells["ページ"].Value), // "Num"列のデータを整数型に変換
                         Id = Convert.ToInt32(row.Cells["動作ID"].Value), // "Id"列のデータを整数型に変換
@@ -535,34 +536,48 @@ namespace slide_app
             }
 
             int before_num = 1;
-            foreach (var note in notes)
+            try
             {
-                if (BackVOICEVOX.CancellationPending) return;
-                waveFile = String.Format(@"\{0}.wav", note.No);
-                if (new Regex(@"(。|？|\?|！|\!)").IsMatch(note.Pnt)) postPhonemeLength = 0.5f;
-                if (note.Num != before_num) prePhonemeLength = 0.5f;
+                foreach (var note in notes)
+                {
+                    if (BackVOICEVOX.CancellationPending) return;
+                    waveFile = String.Format(@"\{0}.wav", note.No);
+                    if (new Regex(@"(。|？|\?|！|\!)").IsMatch(note.Pnt)) postPhonemeLength = 0.5f;
+                    if (note.Num != before_num) prePhonemeLength = 0.5f;
 
-                // 音声生成が完了するまで録音は開始できない //
-                VoicevoxUtility.RecordSpeech(Form1.dic_voice + waveFile, note.Sentence, Form1.voice_name).Wait();
-                BackVOICEVOX.ReportProgress(note.No);
-                prePhonemeLength = 0.25f;
-                postPhonemeLength = 0.25f;
-                before_num = note.Num;
+                    // 音声生成が完了するまで録音は開始できない //
+                    VoicevoxUtility.RecordSpeech(Form1.dic_voice + waveFile, note.Sentence, Form1.voice_name).Wait();
+                    BackVOICEVOX.ReportProgress(note.No);
+                    prePhonemeLength = 0.25f;
+                    postPhonemeLength = 0.25f;
+                    before_num = note.Num;
+                }
+            }
+            catch (Exception)
+            {
+                BackVOICEVOX.CancelAsync();
             }
         }
 
         private void ModeCombo_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (ModeCombo.Text == "normal")
+            if (ModeCombo.Text == "visual" || ModeCombo.Text == "normal")
             {
                 ModeText.Text = "出力された表通りに音声を作成します。\n" +
-                                "字幕はノート内のカッコ内に記載された文章のみを動画下部に表示します。";
+                                "スライド下にはキャラクタが話す内容が表示され、左には補足の説明が入ります。\n"+
+                                "（以前のバージョンで「normal」に設定していた場合もこの設定となります。補足の字幕のみ表示したい場合、「none」に設定してください。";
             }
-            else if (ModeCombo.Text == "visual")
+            else if (ModeCombo.Text == "visual+")
             {
                 ModeText.Text = "出力された表通りに音声を作成します。\n" +
-                                 "字幕はノート内の全ての文章を動画左部に表示します。";
+                                 "字幕はノート内の全ての文章をスライド下に表示します。";
             }
+            else if (ModeCombo.Text == "none")
+            {
+                ModeText.Text = "出力された表通りに音声を作成します。\n" +
+                                "ノート内のカッコ内に記載された文章のみをスライド左に表示します。";
+            }
+            
         }
 
         private void VoiceNameCombo_SelectedIndexChanged(object sender, EventArgs e)
@@ -596,12 +611,13 @@ namespace slide_app
             File.Delete(Directory.GetCurrentDirectory() + "\\csv\\" + file_name + ".tsv");
             Directory.Delete(Directory.GetCurrentDirectory() + "\\slide_image\\" + file_name, true);
             Directory.Delete(Directory.GetCurrentDirectory() + "\\voice\\" + file_name, true);
-            
+
             CancelButton.Enabled = false;
             is_cancel = true;
             BackVOICEVOX.CancelAsync();
 
             progressBar1.Value = 0;
+            StateLabel.Text = "作成キャンセル";
         }
 
         private void BackVoiceTest_DoWork(object sender, DoWorkEventArgs e)
@@ -684,7 +700,7 @@ namespace slide_app
                 new_file = false;
             }
             else is_cancel = false;
-                
+
         }
 
         private void RecordButton_Click_1(object sender, EventArgs e)
@@ -716,13 +732,13 @@ namespace slide_app
         }
         private void ResultGrid_CellEndEdit2(object sender, DataGridViewCellEventArgs e)
         {
-            SaveButton.Enabled = true;
+            if (!new_file) SaveButton.Enabled = true;
             GenerateButton.Enabled = true;
         }
 
         private void SaveButton_Click(object sender, EventArgs e)
         {
-            
+
             var ppt_file = new ppt.Application().Presentations.Open(OpenFileBox.Text,
                 MsoTriState.msoTrue,
                 MsoTriState.msoTrue,
@@ -752,8 +768,9 @@ namespace slide_app
             lines.Add(string.Join("\t", header));
 
             //列の値をカンマ区切りで1行に連結
-            foreach (DataRow dr in table.Rows) { 
-                lines.Add(string.Join("\t", dr.ItemArray)); 
+            foreach (DataRow dr in table.Rows)
+            {
+                lines.Add(string.Join("\t", dr.ItemArray));
             }
             string dic_csv = Directory.GetCurrentDirectory() + "\\csv";
             if (!Directory.Exists(dic_csv))

@@ -164,9 +164,9 @@ namespace slide_app
             ResultGrid.RowTemplate.Height = 29;
             ResultGrid.Size = new System.Drawing.Size(940, 370);
             ResultGrid.TabIndex = 5;
-            ResultGrid.CurrentCellChanged += ResultGrid_CurrentCellChanged;
             ResultGrid.CellBeginEdit += ResultGrid_CellBeginEdit;
             ResultGrid.CellEndEdit += ResultGrid_CellEndEdit2;
+            ResultGrid.CurrentCellChanged += ResultGrid_CurrentCellChanged;
             // 
             // tabControl1
             // 
@@ -338,7 +338,7 @@ namespace slide_app
             // 
             ModeCombo.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
             ModeCombo.FormattingEnabled = true;
-            ModeCombo.Items.AddRange(new object[] { "normal", "visual" });
+            ModeCombo.Items.AddRange(new object[] { "visual", "visual+", "none" });
             ModeCombo.Location = new System.Drawing.Point(176, 59);
             ModeCombo.Name = "ModeCombo";
             ModeCombo.Size = new System.Drawing.Size(151, 28);
