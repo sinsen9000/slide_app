@@ -124,7 +124,7 @@ public class image_move : MonoBehaviour
                 }
                 _CapyionCoroutine = StartCoroutine(ShowCaption(line.Bracket));
             }
-            if (json_data.visualMode == "visual") TextObj.text = line.Voice;
+            if (json_data.visualMode == "visual" || json_data.visualMode == "visual+" || json_data.visualMode == "normal") TextObj.text = line.Voice;
             var wav_www = new WWW("file:///" + file_path.Replace("\\","/") + "voice/" + json_data.fileName + "/" + line.No.ToString() + ".wav");
             while (!wav_www.isDone) {
                 Debug.Log("Now loading......"); //ロード完了まで待機
