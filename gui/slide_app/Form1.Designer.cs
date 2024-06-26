@@ -53,9 +53,18 @@ namespace slide_app
             label2 = new System.Windows.Forms.Label();
             SpeedBar = new System.Windows.Forms.TrackBar();
             panel2 = new System.Windows.Forms.Panel();
-            ModeText = new System.Windows.Forms.RichTextBox();
+            tableLayoutPanel1 = new System.Windows.Forms.TableLayoutPanel();
+            label16 = new System.Windows.Forms.Label();
+            CharacterLabel = new System.Windows.Forms.Label();
+            FontLabel = new System.Windows.Forms.Label();
+            label11 = new System.Windows.Forms.Label();
+            HosokuLabel = new System.Windows.Forms.Label();
+            AudioVoiceLabel = new System.Windows.Forms.Label();
+            label7 = new System.Windows.Forms.Label();
+            label12 = new System.Windows.Forms.Label();
+            label17 = new System.Windows.Forms.Label();
+            CaptionLabel = new System.Windows.Forms.Label();
             label4 = new System.Windows.Forms.Label();
-            ModeCombo = new System.Windows.Forms.ComboBox();
             BackVoiceTest = new System.ComponentModel.BackgroundWorker();
             OpenFileBox = new System.Windows.Forms.ComboBox();
             RecordButton = new System.Windows.Forms.Button();
@@ -70,6 +79,7 @@ namespace slide_app
             ((System.ComponentModel.ISupportInitialize)IntonationBar).BeginInit();
             ((System.ComponentModel.ISupportInitialize)SpeedBar).BeginInit();
             panel2.SuspendLayout();
+            tableLayoutPanel1.SuspendLayout();
             SuspendLayout();
             // 
             // OpenFileButton
@@ -107,9 +117,9 @@ namespace slide_app
             // progressBar1
             // 
             progressBar1.Anchor = System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left;
-            progressBar1.Location = new System.Drawing.Point(22, 495);
+            progressBar1.Location = new System.Drawing.Point(16, 495);
             progressBar1.Name = "progressBar1";
-            progressBar1.Size = new System.Drawing.Size(476, 29);
+            progressBar1.Size = new System.Drawing.Size(482, 29);
             progressBar1.TabIndex = 6;
             // 
             // StateLabel
@@ -307,22 +317,150 @@ namespace slide_app
             // panel2
             // 
             panel2.BorderStyle = System.Windows.Forms.BorderStyle.FixedSingle;
-            panel2.Controls.Add(ModeText);
+            panel2.Controls.Add(tableLayoutPanel1);
             panel2.Controls.Add(label4);
-            panel2.Controls.Add(ModeCombo);
             panel2.Location = new System.Drawing.Point(488, 9);
             panel2.Name = "panel2";
-            panel2.Size = new System.Drawing.Size(510, 211);
+            panel2.Size = new System.Drawing.Size(510, 253);
             panel2.TabIndex = 14;
             // 
-            // ModeText
+            // tableLayoutPanel1
             // 
-            ModeText.Location = new System.Drawing.Point(3, 93);
-            ModeText.Name = "ModeText";
-            ModeText.ReadOnly = true;
-            ModeText.Size = new System.Drawing.Size(502, 113);
-            ModeText.TabIndex = 14;
-            ModeText.Text = "動画のアクセシビリティの設定をします。";
+            tableLayoutPanel1.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
+            tableLayoutPanel1.ColumnCount = 2;
+            tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle());
+            tableLayoutPanel1.ColumnStyles.Add(new System.Windows.Forms.ColumnStyle());
+            tableLayoutPanel1.Controls.Add(label16, 0, 4);
+            tableLayoutPanel1.Controls.Add(CharacterLabel, 0, 4);
+            tableLayoutPanel1.Controls.Add(FontLabel, 0, 3);
+            tableLayoutPanel1.Controls.Add(label11, 0, 2);
+            tableLayoutPanel1.Controls.Add(HosokuLabel, 1, 1);
+            tableLayoutPanel1.Controls.Add(AudioVoiceLabel, 1, 0);
+            tableLayoutPanel1.Controls.Add(label7, 0, 0);
+            tableLayoutPanel1.Controls.Add(label12, 0, 1);
+            tableLayoutPanel1.Controls.Add(label17, 0, 3);
+            tableLayoutPanel1.Controls.Add(CaptionLabel, 1, 2);
+            tableLayoutPanel1.Font = new System.Drawing.Font("Yu Gothic UI", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            tableLayoutPanel1.Location = new System.Drawing.Point(104, 46);
+            tableLayoutPanel1.Name = "tableLayoutPanel1";
+            tableLayoutPanel1.RowCount = 5;
+            tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 20F));
+            tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 20F));
+            tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 20F));
+            tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 20F));
+            tableLayoutPanel1.RowStyles.Add(new System.Windows.Forms.RowStyle(System.Windows.Forms.SizeType.Percent, 20F));
+            tableLayoutPanel1.Size = new System.Drawing.Size(286, 191);
+            tableLayoutPanel1.TabIndex = 14;
+            // 
+            // label16
+            // 
+            label16.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
+            label16.AutoSize = true;
+            label16.Font = new System.Drawing.Font("Yu Gothic UI", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            label16.Location = new System.Drawing.Point(3, 152);
+            label16.Name = "label16";
+            label16.Size = new System.Drawing.Size(159, 39);
+            label16.TabIndex = 9;
+            label16.Text = "キャラクターの動作";
+            // 
+            // CharacterLabel
+            // 
+            CharacterLabel.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
+            CharacterLabel.AutoSize = true;
+            CharacterLabel.Font = new System.Drawing.Font("Yu Gothic UI", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            CharacterLabel.Location = new System.Drawing.Point(168, 152);
+            CharacterLabel.Name = "CharacterLabel";
+            CharacterLabel.Size = new System.Drawing.Size(115, 39);
+            CharacterLabel.TabIndex = 8;
+            CharacterLabel.Text = "None";
+            // 
+            // FontLabel
+            // 
+            FontLabel.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
+            FontLabel.AutoSize = true;
+            FontLabel.Font = new System.Drawing.Font("Yu Gothic UI", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            FontLabel.Location = new System.Drawing.Point(168, 114);
+            FontLabel.Name = "FontLabel";
+            FontLabel.Size = new System.Drawing.Size(115, 38);
+            FontLabel.TabIndex = 7;
+            FontLabel.Text = "24";
+            // 
+            // label11
+            // 
+            label11.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
+            label11.AutoSize = true;
+            label11.Font = new System.Drawing.Font("Yu Gothic UI", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            label11.Location = new System.Drawing.Point(3, 76);
+            label11.Name = "label11";
+            label11.Size = new System.Drawing.Size(159, 38);
+            label11.TabIndex = 4;
+            label11.Text = "動画の字幕";
+            // 
+            // HosokuLabel
+            // 
+            HosokuLabel.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
+            HosokuLabel.AutoSize = true;
+            HosokuLabel.Font = new System.Drawing.Font("Yu Gothic UI", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            HosokuLabel.Location = new System.Drawing.Point(168, 38);
+            HosokuLabel.Name = "HosokuLabel";
+            HosokuLabel.Size = new System.Drawing.Size(115, 38);
+            HosokuLabel.TabIndex = 3;
+            HosokuLabel.Text = "False";
+            // 
+            // AudioVoiceLabel
+            // 
+            AudioVoiceLabel.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
+            AudioVoiceLabel.AutoSize = true;
+            AudioVoiceLabel.Font = new System.Drawing.Font("Yu Gothic UI", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            AudioVoiceLabel.Location = new System.Drawing.Point(168, 0);
+            AudioVoiceLabel.Name = "AudioVoiceLabel";
+            AudioVoiceLabel.Size = new System.Drawing.Size(115, 38);
+            AudioVoiceLabel.TabIndex = 2;
+            AudioVoiceLabel.Text = "False";
+            // 
+            // label7
+            // 
+            label7.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
+            label7.AutoSize = true;
+            label7.Font = new System.Drawing.Font("Yu Gothic UI", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            label7.Location = new System.Drawing.Point(3, 0);
+            label7.Name = "label7";
+            label7.Size = new System.Drawing.Size(159, 38);
+            label7.TabIndex = 0;
+            label7.Text = "動画の音声";
+            // 
+            // label12
+            // 
+            label12.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
+            label12.AutoSize = true;
+            label12.Font = new System.Drawing.Font("Yu Gothic UI", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            label12.Location = new System.Drawing.Point(3, 38);
+            label12.Name = "label12";
+            label12.Size = new System.Drawing.Size(159, 38);
+            label12.TabIndex = 5;
+            label12.Text = "補足字幕も音声案内";
+            // 
+            // label17
+            // 
+            label17.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
+            label17.AutoSize = true;
+            label17.Font = new System.Drawing.Font("Yu Gothic UI", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            label17.Location = new System.Drawing.Point(3, 114);
+            label17.Name = "label17";
+            label17.Size = new System.Drawing.Size(159, 38);
+            label17.TabIndex = 10;
+            label17.Text = "フォントの大きさ";
+            // 
+            // CaptionLabel
+            // 
+            CaptionLabel.Anchor = System.Windows.Forms.AnchorStyles.Top | System.Windows.Forms.AnchorStyles.Bottom | System.Windows.Forms.AnchorStyles.Left | System.Windows.Forms.AnchorStyles.Right;
+            CaptionLabel.AutoSize = true;
+            CaptionLabel.Font = new System.Drawing.Font("Yu Gothic UI", 10F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
+            CaptionLabel.Location = new System.Drawing.Point(168, 76);
+            CaptionLabel.Name = "CaptionLabel";
+            CaptionLabel.Size = new System.Drawing.Size(115, 38);
+            CaptionLabel.TabIndex = 6;
+            CaptionLabel.Text = "False";
             // 
             // label4
             // 
@@ -330,20 +468,9 @@ namespace slide_app
             label4.Font = new System.Drawing.Font("Yu Gothic UI", 12F, System.Drawing.FontStyle.Regular, System.Drawing.GraphicsUnit.Point);
             label4.Location = new System.Drawing.Point(3, 3);
             label4.Name = "label4";
-            label4.Size = new System.Drawing.Size(186, 28);
+            label4.Size = new System.Drawing.Size(185, 28);
             label4.TabIndex = 13;
             label4.Text = "動画のアクセシビリティ";
-            // 
-            // ModeCombo
-            // 
-            ModeCombo.DropDownStyle = System.Windows.Forms.ComboBoxStyle.DropDownList;
-            ModeCombo.FormattingEnabled = true;
-            ModeCombo.Items.AddRange(new object[] { "visual", "visual+", "none" });
-            ModeCombo.Location = new System.Drawing.Point(176, 59);
-            ModeCombo.Name = "ModeCombo";
-            ModeCombo.Size = new System.Drawing.Size(151, 28);
-            ModeCombo.TabIndex = 13;
-            ModeCombo.SelectedIndexChanged += ModeCombo_SelectedIndexChanged;
             // 
             // OpenFileBox
             // 
@@ -422,6 +549,8 @@ namespace slide_app
             ((System.ComponentModel.ISupportInitialize)SpeedBar).EndInit();
             panel2.ResumeLayout(false);
             panel2.PerformLayout();
+            tableLayoutPanel1.ResumeLayout(false);
+            tableLayoutPanel1.PerformLayout();
             ResumeLayout(false);
             PerformLayout();
         }
@@ -456,9 +585,7 @@ namespace slide_app
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.TrackBar SpeedBar;
         private System.Windows.Forms.Panel panel2;
-        private System.Windows.Forms.RichTextBox ModeText;
         private System.Windows.Forms.Label label4;
-        private System.Windows.Forms.ComboBox ModeCombo;
         private System.Windows.Forms.Button VoiceTestButton;
         private System.ComponentModel.BackgroundWorker BackVoiceTest;
         private System.Windows.Forms.ComboBox OpenFileBox;
@@ -466,6 +593,17 @@ namespace slide_app
         private System.Windows.Forms.Button AvatorButton;
         private System.Windows.Forms.Button SaveButton;
         private System.Windows.Forms.FolderBrowserDialog folderBrowserDialog1;
+        private System.Windows.Forms.TableLayoutPanel tableLayoutPanel1;
+        private System.Windows.Forms.Label label7;
+        private System.Windows.Forms.Label label11;
+        private System.Windows.Forms.Label label12;
+        private System.Windows.Forms.Label label16;
+        private System.Windows.Forms.Label label17;
+        internal System.Windows.Forms.Label HosokuLabel;
+        internal System.Windows.Forms.Label AudioVoiceLabel;
+        internal System.Windows.Forms.Label CaptionLabel;
+        internal System.Windows.Forms.Label CharacterLabel;
+        internal System.Windows.Forms.Label FontLabel;
     }
 }
 

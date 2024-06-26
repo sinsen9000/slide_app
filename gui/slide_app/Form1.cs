@@ -13,15 +13,15 @@ using System.IO;
 using System.Diagnostics;
 using Microsoft.Office.Core;
 using ppt = Microsoft.Office.Interop.PowerPoint;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement;
-using static System.Windows.Forms.VisualStyles.VisualStyleElement.Window;
+using MeCab;
+using Slide_app;
+
 
 namespace slide_app
 {
     public partial class Form1 : Form
     {
-
-        public static List<Cue_card> notes;
+        public static List<Cue_card> notes, target_notes;
         public static List<SaveFiles> SaveFile_list = new List<SaveFiles>();
         public static Process VoicevoxProcess, UnityProcess;
         public static string file_name, voice_name, waveFile, dic_voice, bracket_sentence;
@@ -31,7 +31,8 @@ namespace slide_app
         private bool new_file, not_FileSelect;
         private bool is_cancel = false;
         private static readonly string passwordChars = "0123456789abcdefghijklmnopqrstuvwxyz";
-
+        private string dic_csv = Directory.GetCurrentDirectory() + "\\csv";
+        private readonly List<int> emotion_list = new List<int> {0,14,15,12,16,10,11,13,0}; //[なし, 喜び, 悲しみ, 期待, 驚き, 怒り, 恐れ, 嫌悪, 信頼]
 
         public class Cue_card
         {
@@ -53,7 +54,11 @@ namespace slide_app
             /// <summary>
             /// 設定ファイルのクラス（Setting.json）
             /// </summary>
-            public string VisualMode { get; set; }
+            public string videoAudio { get; set; }
+            public string hosokuAudio { get; set; }
+            public string videoCaption { get; set; }
+            public string captionFont { get; set; }
+            public string motion { get; set; }
             public string FileName { get; set; }
             public string VoiceName { get; set; }
             public float VoiceSpeed { get; set; }
@@ -84,16 +89,79 @@ namespace slide_app
 
             return sb.ToString();
         }
-        private int Motion_ID(int count)
+        private int Motion_ID(List<int> motion_list, string sentence="",int count=0)
         {
             int motion_ID = 0;
-            if (count >= 30)
+            string ConjunctionText = "", InterjectionText = "";
+            if (sentence.Contains("こちら"))
+            {
+                return 23;
+            }
+
+            var tagger = MeCabTagger.Create();
+            foreach (var node in tagger.ParseToNodes(sentence))
+            {
+                if (0 < node.CharType)
+                {
+                    if (node.Feature.Contains("接続詞"))
+                    {
+                        ConjunctionText = node.Surface;
+                        break;
+                    }
+                    else if (node.Feature.Contains("感動詞"))
+                    {
+                        InterjectionText = node.Surface;
+                        break;
+                    }
+                }
+            }
+            //Debug.WriteLine(resultText.TrimEnd(','));
+            if (ConjunctionText != "")
+            {
+                if (ConjunctionText.Contains("しかし") || ConjunctionText.Contains("しかしながら") || ConjunctionText.Contains("でも") || ConjunctionText.Contains("だが"))
+                {
+                    motion_ID = 26;
+                }
+                else if (ConjunctionText.Contains("では"))
+                {
+                    motion_ID = 20;
+                }
+                else if (ConjunctionText.Contains("まず"))
+                {
+                    motion_ID = 3;
+                }
+                else if (ConjunctionText.Contains("それでは"))
+                {
+                    motion_ID = 2;
+                }
+            }
+            else if (InterjectionText != "")
+            {
+                if (InterjectionText.Contains("はい") || InterjectionText.Contains("ええ"))
+                {
+                    motion_ID = 25;
+                }
+                else if (InterjectionText.Contains("いいえ"))
+                {
+                    motion_ID = 26;
+                }
+            }
+            else if (count >= 20 || motion_list.Count == 0)
             {
                 Random r1 = new System.Random();
-                if (r1.Next(1, 11) < 7)
+                int num = r1.Next(1, 11);
+                if (num == 1 || num == 3 || num == 5 || num == 7 || num == 9)
+                {
+                    var sampleData = new SentimentModel.ModelInput() { Sentence = sentence };
+                    var result = SentimentModel.Predict(sampleData); //感情推論
+                    motion_ID = emotion_list[(int)result.PredictedLabel];
+                    if (!motion_list.Contains(motion_ID)) return motion_ID;
+                }
+                while (true)
                 {
                     Random r2 = new System.Random();
-                    motion_ID = r2.Next(1, 4);
+                    motion_ID = r2.Next(1, 5);
+                    if (!motion_list.Contains(motion_ID)) break;
                 }
             }
             return motion_ID;
@@ -152,9 +220,7 @@ namespace slide_app
             prePhonemeLength = 0.25f;
             postPhonemeLength = 0.25f;
 
-            ModeCombo.Text = "visual";
             file_name = "";
-
             Directory_make(".\\slide_image");
             Directory_make(".\\voice");
             progressBar1.Style = ProgressBarStyle.Continuous;
@@ -230,10 +296,12 @@ namespace slide_app
                         DialogResult result = MessageBox.Show("そのスライドは既にスライド画像・音声・表ができています\n削除して新しく作成しますか？", "", MessageBoxButtons.YesNo);
                         if (result == DialogResult.Yes)
                         {
+                            file_name = files.random_str;
                             not_FileSelect = true;
-                            File.Delete(Directory.GetCurrentDirectory() + "\\csv\\" + file_name + ".tsv");
-                            Directory.Delete(Directory.GetCurrentDirectory() + "\\slide_image\\" + file_name, true);
-                            Directory.Delete(Directory.GetCurrentDirectory() + "\\voice\\" + file_name, true);
+                            if (File.Exists($"{dic_csv}\\{file_name}\\use_save.tsv")) File.Delete($"{dic_csv}\\{file_name}\\use_save.tsv");
+                            if (File.Exists($"{dic_csv}\\{file_name}\\use_video.tsv")) File.Delete($"{dic_csv}\\{file_name}\\use_video.tsv");
+                            if (Directory.Exists(Directory.GetCurrentDirectory() + "\\slide_image\\" + file_name)) Directory.Delete(Directory.GetCurrentDirectory() + "\\slide_image\\" + file_name, true);
+                            if (Directory.Exists(Directory.GetCurrentDirectory() + "\\voice\\" + file_name)) Directory.Delete(Directory.GetCurrentDirectory() + "\\voice\\" + file_name, true);
                             List<string> lines = new List<string>();
                             foreach (SaveFiles j in SaveFile_list)
                             {
@@ -244,13 +312,11 @@ namespace slide_app
                             {
                                 while (0 <= sr.Peek())
                                 {
-                                    //カンマ区切りで分割して配列で格納する
-                                    var line = sr.ReadLine().Split('\t');
+                                    var line = sr.ReadLine().Split('\t'); //カンマ区切りで分割して配列で格納する
                                     if (line is null) continue;
                                     else if (line.Count() < 2) break;
-                                    //リストにデータを追加する
                                     SaveFiles s_d = new SaveFiles { random_str = line[0], ppt_filename = line[1] };
-                                    SaveFile_list.Add(s_d);
+                                    SaveFile_list.Add(s_d); //リストにデータを追加する
                                 }
                                 OpenFileBox.Items.Remove(ofDialog.FileName);
                             }
@@ -270,15 +336,42 @@ namespace slide_app
                 return;
             }
 
-            // スライド画像・ノートの読み込み
+            SaveButton.Enabled = false;
             var ppt_file = new ppt.Application().Presentations.Open(OpenFileBox.Text,
                     MsoTriState.msoTrue,
                     MsoTriState.msoTrue,
-                    MsoTriState.msoFalse);
+                    MsoTriState.msoFalse); //スライド画像・ノートの読み込み
             string txt;
             int num = 0;
             notes = new List<Cue_card>();
-            string mode = ModeCombo.Text;
+            List<string> words = new List<string>();
+            List<string> branket_words = new List<string>();
+
+            void add_text(string normal_sentence = "", string branket_text = "", int i = 0)
+            {
+                num += 1;
+                int word_count = words.Count;
+                string point = "。";
+                List<int> motion_list = new List<int>();
+                if (notes.Count > 0)
+                {
+                    int num = 0;
+                    foreach (Cue_card _index in Enumerable.Reverse(notes).ToList())
+                    {
+                        motion_list.Add(_index.Id);
+                        num += 1;
+                        if (num == 2) break;
+                    }
+                }
+                int motion_ID = Motion_ID(motion_list, normal_sentence, word_count);
+                if (new Regex(@"(（|\()").IsMatch(words[word_count - 1])) point = words[word_count - 1];
+
+                Cue_card m = new Cue_card { No = num, Num = i, Id = motion_ID, Pnt = point, Sentence = normal_sentence, Voice = normal_sentence, Bracket = branket_text, Size = words.Count };
+                notes.Add(m);
+                words.Clear();
+                branket_words.Clear();
+            }
+
             for (int i = 1; i <= ppt_file.Slides.Count; i++) //スライドのインデックスは１から
             {
                 txt = ppt_file.Slides[i].NotesPage.Shapes.Placeholders[2].TextFrame.TextRange.Text;
@@ -286,79 +379,42 @@ namespace slide_app
                 foreach (string line in temp_lines) //ノートの分割
                 {
                     char[] splitStr = line.ToCharArray();
-                    List<string> words = new List<string>();
-                    List<string> square_txts = new List<string>();
-                    string t;
+                    string target_word, normal_sentence, branket_text;
+                    int note_count;
                     foreach (var word in splitStr)
                     {
-                        int note_count = notes.Count();
-                        words.Add(word.ToString());
-                        if (new Regex(@"(。|？|\?|！|\!|（|「|\(|）|」|\))").IsMatch(word.ToString())) //これら記号は分割記号となる
+                        note_count = notes.Count();
+                        target_word = word.ToString();
+                        if (new Regex(@"(（|\(|）|\))").IsMatch(target_word) && note_count > 0)
                         {
-                            t = String.Join("", words.ToArray());
-                            if (is_bracket)
+                            if (new Regex(@"(（|\()").IsMatch(target_word)) is_bracket = true;
+                            else if (new Regex(@"(）|\))").IsMatch(target_word))
                             {
-                                bracket_sentence = bracket_sentence + t;
-                                if (new Regex(@"(）|\))").IsMatch(word.ToString()) && note_count > 0)
-                                {
-                                    // 字幕文の生成
-                                    if (mode != "visual+") notes[note_count - 1].Bracket = bracket_sentence[..^1];
-                                    else
-                                    {
-                                        // アクセシビリティ優先の場合は（）内文章は音声文・音声字幕文に含める
-                                        notes[note_count - 1].Sentence += ("（" + bracket_sentence[..^1] + "）");
-                                        notes[note_count - 1].Voice = notes[notes.Count() - 1].Sentence;
-                                        notes[note_count - 1].Pnt = "）";
-                                    }
-                                    bracket_sentence = "";
-                                    is_bracket = false;
-                                }
+                                words.Add("<branket>");
+                                is_bracket = false;
                             }
-                            else if (!new Regex("^[ -/:-@[-´{-~]+$").IsMatch(t) && !new Regex("^[！”＃＄％＆’（）＝～｜‘｛＋＊｝＜＞？＿－＾￥＠「；：」、。・]*$").IsMatch(t))
-                            {
-                                // 音声文の生成
-                                if (note_count > 0 && new Regex(@"「").IsMatch(notes[note_count - 1].Sentence) && new Regex(@"」").IsMatch(t))
-                                {
-                                    // 「」内にある文字は前の文章に付随する
-                                    notes[note_count - 1].Sentence += t;
-                                    notes[note_count - 1].Voice = notes[note_count - 1].Sentence;
-                                }
-                                else if (note_count > 0 && ModeCombo.Text == "visual+" && new Regex(@"(）|\))").IsMatch(notes[note_count - 1].Pnt))
-                                {
-                                    // アクセシビリティ優先の場合、()内文字は前の文章に付随する
-                                    notes[note_count - 1].Sentence += t;
-                                    notes[note_count - 1].Voice = notes[note_count - 1].Sentence;
-                                    notes[note_count - 1].Pnt = words[words.Count - 1];
-                                }
-                                else
-                                {
-                                    if (new Regex(@"(（|「|\(|「)").IsMatch(t)) t = t[..^1]; //（や「は先頭文字からなくす。
-                                    if (note_count > 0 && notes[note_count - 1].Pnt == "「") t = "「" + t;
+                            continue;
+                        }
+                        if (is_bracket)
+                        {
+                            branket_words.Add(target_word);
+                            continue;
+                        }
 
-                                    num += 1;
-                                    int motion_ID = Motion_ID(words.Count);
-                                    Cue_card m = new Cue_card { No = num, Num = i, Id = motion_ID, Pnt = words[words.Count - 1], Sentence = t, Voice = t, Bracket = "", Size = words.Count };
-                                    notes.Add(m);
-                                }
-
-                            }
-                            else if (ModeCombo.Text == "visual+" && new Regex(@"(。|？|\?|！|\!)").IsMatch(t) && note_count > 0)
-                            {
-                                notes[note_count - 1].Sentence += t;
-                                notes[note_count - 1].Voice = notes[note_count - 1].Sentence;
-                            }
-
-                            if (new Regex(@"(（|\()").IsMatch(word.ToString())) is_bracket = true;
-                            words.Clear();
+                        words.Add(target_word);
+                        if (new Regex(@"(。|．|？|\?|！|\!)").IsMatch(target_word)) //分割記号となる対象が出た場合、
+                        {
+                            normal_sentence = String.Join("", words.ToArray());
+                            branket_text = String.Join("", branket_words.ToArray());
+                            add_text(normal_sentence, branket_text, i);
                         }
                     }
-                    t = String.Join("", words.ToArray());
-                    if (words.Count() > 0 && t != " ")
+                    normal_sentence = String.Join("", words.ToArray());
+                    if (words.Count() > 0 && normal_sentence != " ") //ノート最後の行で文章があれば登録
                     {
-                        int motion_ID = Motion_ID(words.Count);
-                        num = num + 1;
-                        Cue_card m = new Cue_card { No = num, Num = i, Id = motion_ID, Pnt = "。", Sentence = String.Join("", words.ToArray()), Voice = String.Join("", words.ToArray()), Bracket = "", Size = words.Count };
-                        notes.Add(m);
+                        normal_sentence = String.Join("", words.ToArray());
+                        branket_text = String.Join("", branket_words.ToArray());
+                        add_text(normal_sentence, branket_text, i);
                     }
                 }
             }
@@ -413,8 +469,6 @@ namespace slide_app
                         SaveFile_list.Add(s_d);
                     }
                     OpenFileBox.Items.Remove(ofDialog.FileName);
-                    //OpenFileBox.Items.Clear();
-                    //foreach (SaveFiles j in SaveFile_list) OpenFileBox.Items.Add(j.ppt_filename);
                 }
             }
             notes = new List<Cue_card>();
@@ -423,7 +477,7 @@ namespace slide_app
             {
                 if (files.ppt_filename == OpenFileBox.Text)
                 {
-                    using (StreamReader sr = new StreamReader(".\\csv\\" + files.random_str + ".tsv"))
+                    using (StreamReader sr = new StreamReader($".\\csv\\{files.random_str}\\use_save.tsv"))
                     {
                         bool isFirstLineSkip = true;
                         while (0 <= sr.Peek())
@@ -453,19 +507,25 @@ namespace slide_app
 
         private void GenerateButton_Click(object sender, EventArgs e)
         {
-            if (ModeCombo.Text == "" || VoiceNameCombo.Text == "")
+            if (VoiceNameCombo.Text == "")
             {
-                MessageBox.Show("音源名とアクセシビリティの設定をしていません", "エラー",
-                                    MessageBoxButtons.OK, MessageBoxIcon.Error);
+                MessageBox.Show("音声名を設定してください", "エラー",
+                                        MessageBoxButtons.OK, MessageBoxIcon.Error);
                 return;
             }
             progressBar1.Value = 0;
+            Form2 form2 = new Form2(this); //アクセシビリティに関する設定画面を出す
+            form2.FormClosed += new FormClosedEventHandler(Form2_FormClosed);
+            form2.Show();
+        }
 
+        private void Form2_FormClosed(object sender, FormClosedEventArgs e)
+        {
             // リスト末尾にVOICEVOXの音源名と締めのあいさつを入れる。音源名の発声はライセンス対策 //
             if (notes[notes.Count - 1].Sentence != "ここまでのご視聴、ありがとうございました。")
             {
                 List<Cue_card> last_list = new List<Cue_card>();
-                Cue_card m_last_1 = new Cue_card { No = notes[notes.Count - 1].No + 1, Num = notes[notes.Count - 1].Num, Id = 21, Pnt = "。", Sentence = String.Format("この動画は、voicevox、{0}の音声でお送り致しました。", VoiceNameCombo.Text), Bracket = String.Format("VOICEVOX: {0}", VoiceNameCombo.Text), Voice = String.Format("この動画は、voicevox、{0}の音声でお送り致しました。", VoiceNameCombo.Text), Size = 10 };
+                Cue_card m_last_1 = new Cue_card { No = notes[notes.Count - 1].No + 1, Num = notes[notes.Count - 1].Num, Id = 21, Pnt = "。", Sentence = String.Format("この動画は、VOICEVOX: {0}の音声でお送り致しました。", VoiceNameCombo.Text), Bracket = "", Voice = String.Format("この動画は、VOICEVOX: {0}の音声でお送り致しました。", VoiceNameCombo.Text), Size = 10 };
                 last_list.Add(m_last_1);
                 notes.Add(m_last_1);
                 Cue_card m_last_2 = new Cue_card { No = m_last_1.No + 1, Num = m_last_1.Num, Id = 0, Pnt = "。", Sentence = String.Format("ここまでのご視聴、ありがとうございました。", VoiceNameCombo.Text), Bracket = "", Voice = "ここまでのご視聴、ありがとうございました。", Size = 10 };
@@ -473,24 +533,27 @@ namespace slide_app
                 notes.Add(m_last_2);
                 foreach (var note in last_list) table.Rows.Add(note.No, note.Num, note.Id, note.Pnt, note.Sentence, note.Voice, note.Bracket);
             }
-            // スライド画像を生成する //
             if (new_file) file_name = GeneratePassword(10); //ファイルは適当な文字列。unityで音声や画像を読み込む際、日本語を含んだ文字列は認識できないため
-            var ppt_file = new ppt.Application().Presentations.Open(OpenFileBox.Text,
-                    MsoTriState.msoTrue,
-                    MsoTriState.msoTrue,
-                    MsoTriState.msoFalse);
-            int width = (int)ppt_file.PageSetup.SlideWidth;
-            int height = (int)ppt_file.PageSetup.SlideHeight;
-            string file2;
+
+            // スライド画像を生成する //
             string dic_image = Directory.GetCurrentDirectory() + "\\slide_image\\" + file_name;
             if (!Directory.Exists(dic_image))
             {
                 DirectoryInfo di = new DirectoryInfo(dic_image);  //スライド画像保存フォルダを生成
                 di.Create();
             }
+            var ppt_file = new ppt.Application().Presentations.Open(OpenFileBox.Text,
+                    MsoTriState.msoTrue,
+                    MsoTriState.msoTrue,
+                    MsoTriState.msoFalse);
+            string file2;
             for (int i = 1; i <= ppt_file.Slides.Count; i++)
             {
                 file2 = dic_image + String.Format("\\slide{0:0}.jpg", i); //JPEGとして保存
+                ppt_file.PageSetup.SlideWidth = 16 * 64;
+                ppt_file.PageSetup.SlideHeight = 9 * 64;
+                int width = (int)ppt_file.PageSetup.SlideWidth;
+                int height = (int)ppt_file.PageSetup.SlideHeight;
                 ppt_file.Slides[i].Export(file2, "jpg", width, height);
             }
             if (ppt_file != null)
@@ -507,6 +570,7 @@ namespace slide_app
             }
             OpenFileButton.Enabled = false;
             GenerateButton.Enabled = false;
+            SaveButton.Enabled = false;
             StateLabel.Text = "音声生成済み:";
             progressBar1.Maximum = notes.Count();
             CancelButton.Enabled = true;
@@ -515,7 +579,7 @@ namespace slide_app
 
         private void BackVOICEVOX_DoWork(object sender, DoWorkEventArgs e)
         {
-            List<Cue_card> notes = new List<Cue_card>(); //ResultGridからデータを取得
+            target_notes = new List<Cue_card>(); //ResultGridからデータを取得
             foreach (DataGridViewRow row in ResultGrid.Rows)
             {
                 if (!row.IsNewRow)
@@ -531,14 +595,31 @@ namespace slide_app
                         Voice = row.Cells["字幕用の文章"].Value.ToString(), // "Voice"列のデータを文字列に変換
                         Size = row.Cells["音声の文章"].Value.ToString().Length
                     };
-                    notes.Add(m);
+                    if (m.Sentence.Contains("<branket>"))
+                    {
+                        string temp_Sentence = m.Sentence;
+                        string temp_Voice = m.Voice;
+                        if (HosokuLabel.Text == "True")
+                        {
+                            m.Sentence = temp_Sentence.Replace("<branket>", $"（{m.Bracket}）");
+                            m.Voice = temp_Voice.Replace("<branket>", $"（{m.Bracket}）");
+                            m.Bracket = "";
+                        }
+                        else
+                        {
+                            m.Sentence = temp_Sentence.Replace("<branket>", "");
+                            m.Voice = temp_Voice.Replace("<branket>", "");
+                        }
+                    }
+                    if (CharacterLabel.Text == "False") m.Id = 0;
+                    target_notes.Add(m);
                 }
             }
 
-            int before_num = 1;
             try
             {
-                foreach (var note in notes)
+                int before_num = 1;
+                foreach (var note in target_notes)
                 {
                     if (BackVOICEVOX.CancellationPending) return;
                     waveFile = String.Format(@"\{0}.wav", note.No);
@@ -546,7 +627,7 @@ namespace slide_app
                     if (note.Num != before_num) prePhonemeLength = 0.5f;
 
                     // 音声生成が完了するまで録音は開始できない //
-                    VoicevoxUtility.RecordSpeech(Form1.dic_voice + waveFile, note.Sentence, Form1.voice_name).Wait();
+                    VoicevoxUtility.RecordSpeech(dic_voice + waveFile, note.Sentence, voice_name).Wait();
                     BackVOICEVOX.ReportProgress(note.No);
                     prePhonemeLength = 0.25f;
                     postPhonemeLength = 0.25f;
@@ -561,24 +642,6 @@ namespace slide_app
 
         private void ModeCombo_SelectedIndexChanged(object sender, EventArgs e)
         {
-            if (ModeCombo.Text == "visual" || ModeCombo.Text == "normal")
-            {
-                ModeText.Text = "出力された表通りに音声を作成します。\n" +
-                                "スライド下にはキャラクタが話す内容が表示され、左には補足の説明が入ります。\n"+
-                                "（以前のバージョンで「normal」に設定していた場合もこの設定となります。補足の字幕のみ表示したい場合、「none」に設定してください。";
-            }
-            else if (ModeCombo.Text == "visual+")
-            {
-                ModeText.Text = "出力された表通りに音声を作成します。\n" +
-                                 "新しく文章を読み込む前にこの設定を行うと、字幕はノート内の全ての文章をスライド下に表示します。\n" +
-                                 "（文章読み込み後に設定した場合は「visual」と同じです。）";
-            }
-            else if (ModeCombo.Text == "none")
-            {
-                ModeText.Text = "出力された表通りに音声を作成します。\n" +
-                                "ノート内のカッコ内に記載された文章のみをスライド左に表示します。";
-            }
-            
         }
 
         private void VoiceNameCombo_SelectedIndexChanged(object sender, EventArgs e)
@@ -609,7 +672,7 @@ namespace slide_app
 
         private void CancelButton_Click(object sender, EventArgs e)
         {
-            File.Delete(Directory.GetCurrentDirectory() + "\\csv\\" + file_name + ".tsv");
+            File.Delete($"{dic_csv}\\{file_name}\\use_video.tsv");
             Directory.Delete(Directory.GetCurrentDirectory() + "\\slide_image\\" + file_name, true);
             Directory.Delete(Directory.GetCurrentDirectory() + "\\voice\\" + file_name, true);
 
@@ -648,23 +711,33 @@ namespace slide_app
             CancelButton.Enabled = false;
             if (!is_cancel) //最後まで遂行した場合
             {
-                //CSV出力用変数の作成
-                List<string> lines = new List<string>();
-
-                //列名をカンマ区切りで1行に連結
-                List<string> header = new List<string>();
-                foreach (DataColumn dr in table.Columns) header.Add(dr.ColumnName);
-                lines.Add(string.Join("\t", header));
-
-                //列の値をカンマ区切りで1行に連結
-                foreach (DataRow dr in table.Rows) lines.Add(string.Join("\t", dr.ItemArray));
-                string dic_csv = Directory.GetCurrentDirectory() + "\\csv";
                 if (!Directory.Exists(dic_csv))
                 {
                     DirectoryInfo di = new DirectoryInfo(dic_csv);
                     di.Create();
                 }
-                File.WriteAllLines(dic_csv + "\\" + file_name + @".tsv", lines, Encoding.UTF8);
+                if (!Directory.Exists($"{dic_csv}\\{file_name}"))
+                {
+                    DirectoryInfo di = new DirectoryInfo($"{dic_csv}\\{file_name}");
+                    di.Create();
+                }
+                
+                List<string> lines = new List<string>();　//CSV出力用変数の作成
+                List<string> header = new List<string>();
+                foreach (DataColumn dr in table.Columns) header.Add(dr.ColumnName);
+                lines.Add(string.Join("\t", header)); //列名をカンマ区切りで1行に連結
+                foreach (DataRow dr in table.Rows) lines.Add(string.Join("\t", dr.ItemArray));
+                File.WriteAllLines($"{dic_csv}\\{file_name}\\use_save.tsv", lines, Encoding.UTF8); //表->tsv保存。保存の復帰に使う
+
+                lines.Clear();
+                List<string> temp;
+                lines.Add("番号\tページ\t動作ID\t記号\t音声の文章\t字幕用の文章\t補足説明");
+                foreach (Cue_card dr in target_notes)
+                {
+                    temp = new List<string> {dr.No.ToString(), dr.Num.ToString(), dr.Id.ToString(), dr.Pnt, dr.Voice, dr.Sentence, dr.Bracket};
+                    lines.Add(string.Join("\t", temp));
+                }
+                File.WriteAllLines($"{dic_csv}\\{file_name}\\use_video.tsv", lines, Encoding.UTF8); //音声List->tsv保存。カンペに使う
 
                 var options = new JsonSerializerOptions
                 {
@@ -679,7 +752,11 @@ namespace slide_app
                 };
                 var jsondata = new JsonData
                 {
-                    VisualMode = ModeCombo.Text,
+                    videoAudio = AudioVoiceLabel.Text,
+                    hosokuAudio = HosokuLabel.Text,
+                    videoCaption = CaptionLabel.Text,
+                    captionFont = FontLabel.Text,
+                    motion = CaptionLabel.Text,
                     FileName = file_name,
                     VoiceName = VoiceNameCombo.Text,
                     VoiceSpeed = Speed,
@@ -739,18 +816,22 @@ namespace slide_app
 
         private void SaveButton_Click(object sender, EventArgs e)
         {
+            AvatorButton.Enabled = false;
+            GenerateButton.Enabled = false;
 
             var ppt_file = new ppt.Application().Presentations.Open(OpenFileBox.Text,
                 MsoTriState.msoTrue,
                 MsoTriState.msoTrue,
                 MsoTriState.msoFalse);
-            int width = (int)ppt_file.PageSetup.SlideWidth;
-            int height = (int)ppt_file.PageSetup.SlideHeight;
             string file2;
             string dic_image = Directory.GetCurrentDirectory() + "\\slide_image\\" + file_name;
             for (int i = 1; i <= ppt_file.Slides.Count; i++)
             {
                 file2 = dic_image + String.Format("\\slide{0:0}.jpg", i); //JPEGとして保存
+                ppt_file.PageSetup.SlideWidth = 16 * 72;
+                ppt_file.PageSetup.SlideHeight = 9 * 72;
+                int width = (int)ppt_file.PageSetup.SlideWidth;
+                int height = (int)ppt_file.PageSetup.SlideHeight;
                 ppt_file.Slides[i].Export(file2, "jpg", width, height);
             }
             if (ppt_file != null)
@@ -773,13 +854,12 @@ namespace slide_app
             {
                 lines.Add(string.Join("\t", dr.ItemArray));
             }
-            string dic_csv = Directory.GetCurrentDirectory() + "\\csv";
             if (!Directory.Exists(dic_csv))
             {
                 DirectoryInfo di = new DirectoryInfo(dic_csv);
                 di.Create();
             }
-            File.WriteAllLines(dic_csv + "\\" + file_name + @".tsv", lines, Encoding.UTF8);
+            File.WriteAllLines($"{dic_csv}\\{file_name}\\use_video.tsv", lines, Encoding.UTF8);
 
             var options = new JsonSerializerOptions
             {
@@ -794,7 +874,11 @@ namespace slide_app
             };
             var jsondata = new JsonData
             {
-                VisualMode = ModeCombo.Text,
+                videoAudio = AudioVoiceLabel.Text,
+                hosokuAudio = HosokuLabel.Text,
+                videoCaption = CaptionLabel.Text,
+                captionFont = FontLabel.Text,
+                motion = CaptionLabel.Text,
                 FileName = file_name,
                 VoiceName = VoiceNameCombo.Text,
                 VoiceSpeed = Speed,
