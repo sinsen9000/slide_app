@@ -1,14 +1,14 @@
 using UnityEngine;
 using System.Collections;
 using UnityEngine.UI;
-using System;
 using System.IO;
 using System.Collections.Generic;
+using UnityEngine.Networking;
 
 public class image_move : MonoBehaviour
 {
     GameObject Model, _text, _caption;
-    WavPlay WavObj;
+    public WavPlay WavObj;
     Animator _anim;
     Text TextObj, CapObj;
     public Record RecObj;
@@ -16,20 +16,30 @@ public class image_move : MonoBehaviour
     public Image image;
     private Coroutine _someCoroutine, _CapyionCoroutine, _AnimationCoroutine;
     public static List<Cue_card> notes = new List<Cue_card>();
-    
+
     public static int now_slide_num;
     public static string file_path;
     private bool caption_bool;
     private JsonData json_data;
+    private ProjectJson project_data;
 
     [System.Serializable] //定義したクラスをJSONデータに変換できるようにする
-    private class JsonData{
-        public string visualMode;
+    private class ProjectJson{
+        public string videoAudio;
+        public string hosokuAudio;
+        public string videoCaption;
+        public string captionFont;
+        public string motion;
         public string fileName;
         public string voiceName;
         public float voiceSpeed;
         public float voiceInterval;
         public float voiceIntonation;
+    }
+
+    [System.Serializable] //定義したクラスをJSONデータに変換できるようにする
+    private class JsonData{
+        public string targetPath;
     }
 
     public class Cue_card{
@@ -41,17 +51,22 @@ public class image_move : MonoBehaviour
         public string Voice { get; set; } //文章内容
         public string Bracket { get; set; } //字幕
     }
-    
+
     // Start is called before the first frame update
     void Start()
     {
-        Model = GameObject.Find("Ailis");
-        WavObj = Model.GetComponent<WavPlay>();
+        Model = GameObject.Find("yuina_tpo");
+        //WavObj = Model.GetComponent<WavPlay>();
         _anim = Model.GetComponent<Animator>();
         image = this.GetComponent<Image>();
         RecObj.slide_lock = false;
-        file_path = Application.dataPath+"/../../";
-        
+
+        using (StreamReader reader = new StreamReader(Application.dataPath+"/../../Setting.json")){ //受け取ったパスのファイルを読み込む
+                string datastr = reader.ReadToEnd();//ファイルの中身をすべて読み込む
+                json_data = JsonUtility.FromJson<JsonData>(datastr);
+            }
+        file_path = Application.dataPath+"/../../projects/"+json_data.targetPath;
+
         _text = GameObject.Find("Caption");
         TextObj = _text.GetComponent<Text>();
         TextObj.text = "";
@@ -59,9 +74,9 @@ public class image_move : MonoBehaviour
         CapObj = _caption.GetComponent<Text>();
         CapObj.text = "";
         caption_bool = false;
-        using (StreamReader reader = new StreamReader(file_path+"Setting.json")){ //受け取ったパスのファイルを読み込む
+        using (StreamReader reader = new StreamReader(file_path+"/Project.json")){ //受け取ったパスのファイルを読み込む
                 string datastr = reader.ReadToEnd();//ファイルの中身をすべて読み込む
-                json_data = JsonUtility.FromJson<JsonData>(datastr);
+                project_data = JsonUtility.FromJson<ProjectJson>(datastr);
             }
     }
 
@@ -79,11 +94,12 @@ public class image_move : MonoBehaviour
         }
         else if (RecObj.record_start){
             var isFirstLineSkip = true;
-            using (StreamReader reader = new StreamReader(file_path+"Setting.json")){ //受け取ったパスのファイルを読み込む
+            using (StreamReader reader = new StreamReader(file_path+"/Project.json")){ //受け取ったパスのファイルを読み込む
                 string datastr = reader.ReadToEnd();//ファイルの中身をすべて読み込む
-                json_data = JsonUtility.FromJson<JsonData>(datastr);
+                project_data = JsonUtility.FromJson<ProjectJson>(datastr);
             }
-            using (StreamReader sr = new StreamReader(file_path+"csv/"+json_data.fileName+".tsv")){
+            Debug.Log(project_data);
+            using (StreamReader sr = new StreamReader($"{file_path}/use_video.tsv")){
                 while (0 <= sr.Peek()){
                     //カンマ区切りで分割して配列で格納する
                     var line = sr.ReadLine().Split('\t');
@@ -107,34 +123,50 @@ public class image_move : MonoBehaviour
         RecObj.slide_lock = true;
         // スライド変更処理（メイン処理）
         foreach(Cue_card line in notes){
+            if (line.Sentence == "" && line.Voice == "" && line.Bracket == ""){
+                yield return null;
+                now_slide_num = line.Num;
+                continue;
+            }
             if(now_slide_num != line.Num){
                 // 元のスライド番号とcsvファイルのスライド番号が違う時スライド変更
-                var image_www = new WWW("file:///" + file_path.Replace("\\","/") + "slide_image/" + json_data.fileName + "/slide" + line.Num.ToString() + ".jpg");
+                var image_www = new WWW("file:///" + file_path.Replace("\\","/") + "/" + "/slide_image/slide" + line.Num.ToString() + ".jpg");
                 while (!image_www.isDone) {
-                    Debug.Log("Now loading......"); //ロード完了まで待機
+                    Debug.Log(image_www.isDone); //ロード完了まで待機
                 }
                 var tex = image_www.texture;
                 image.sprite = Sprite.Create(tex, new Rect(0f,0f, tex.width, tex.height), new Vector2());
             }
             // 音声再生処理
-            if (line.Bracket != ""){
+            if (project_data.videoCaption == "True" && line.Bracket != ""){
                 if (caption_bool) {
                     StopCoroutine(_CapyionCoroutine);
                     CapObj.text = "";
                 }
                 _CapyionCoroutine = StartCoroutine(ShowCaption(line.Bracket));
             }
-            if (json_data.visualMode == "visual" || json_data.visualMode == "visual+" || json_data.visualMode == "normal") TextObj.text = line.Voice;
-            var wav_www = new WWW("file:///" + file_path.Replace("\\","/") + "voice/" + json_data.fileName + "/" + line.No.ToString() + ".wav");
-            while (!wav_www.isDone) {
-                Debug.Log("Now loading......"); //ロード完了まで待機
+            if (project_data.videoCaption == "True" && project_data.hosokuAudio == "False") TextObj.text = line.Sentence;
+            if (project_data.videoAudio == "True") {
+                UnityWebRequest www = UnityWebRequestMultimedia.GetAudioClip("file:///" + file_path.Replace("\\","/") + "/"+ "/voice/" + line.No.ToString() + ".wav",AudioType.WAV);
+                yield return www.SendWebRequest();
+                if (www.result == UnityWebRequest.Result.ConnectionError || www.result == UnityWebRequest.Result.ProtocolError) {
+                    Debug.Log(www.error);
+                }
+                else {
+                    WavObj.audio_source[0].clip = DownloadHandlerAudioClip.GetContent(www);
+                    WavObj.audio_source[0].Play();
+                    if (line.Id != 0){
+                        _AnimationCoroutine = StartCoroutine(AnimationMove(line.Id));
+                    }
+                    yield return new WaitWhile(() => WavObj.audio_source[0].isPlaying);
+                }
             }
-            WavObj.audio_source[0].clip = wav_www.GetAudioClip(true, true);
-            WavObj.audio_source[0].Play();
-            if (line.Id != 0){
-                _AnimationCoroutine = StartCoroutine(AnimationMove(line.Id));
+            else {
+                if (line.Id != 0){
+                    _AnimationCoroutine = StartCoroutine(AnimationMove(line.Id));
+                }
+                yield return new WaitForSeconds(5f);
             }
-            yield return new WaitWhile(() => WavObj.audio_source[0].isPlaying);
             now_slide_num = line.Num;
         }
         TextObj.text = "";
@@ -143,7 +175,7 @@ public class image_move : MonoBehaviour
         RecObj.slide_lock = false;
         RecObj.slide_finish = true;
     }
-    
+
     IEnumerator ShowCaption(string caption_text){
         CapObj.text = caption_text;
         yield return new WaitForSeconds(5f);
