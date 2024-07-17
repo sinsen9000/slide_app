@@ -110,7 +110,7 @@ namespace slide_app
             GenerateButton.Name = "GenerateButton";
             GenerateButton.Size = new System.Drawing.Size(122, 57);
             GenerateButton.TabIndex = 4;
-            GenerateButton.Text = "ノート抽出\r\nスライド画像生成";
+            GenerateButton.Text = "音声作成\r\nスライド画像生成\r\n";
             GenerateButton.UseVisualStyleBackColor = true;
             GenerateButton.Click += GenerateButton_Click;
             // 
@@ -514,7 +514,7 @@ namespace slide_app
             SaveButton.Name = "SaveButton";
             SaveButton.Size = new System.Drawing.Size(122, 57);
             SaveButton.TabIndex = 15;
-            SaveButton.Text = "上書き保存\r\n（文章一覧）";
+            SaveButton.Text = "上書き保存\r\n（文章のみ）";
             SaveButton.UseVisualStyleBackColor = true;
             SaveButton.Click += SaveButton_Click;
             // 
